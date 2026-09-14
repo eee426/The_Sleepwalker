@@ -83,6 +83,12 @@ public class BoardTrap02 : BaseTrap
         base.OnPlayerInteract();
     }
 
+    public override void OnCharacterEnterZone(SleepwalkerController character)
+    {
+        state = TrapState.Armed;
+        base.OnCharacterEnterZone(character);
+    }
+
     protected override void OnSafePass(SleepwalkerController character)
     {
         throw new System.NotImplementedException();
@@ -90,6 +96,6 @@ public class BoardTrap02 : BaseTrap
 
     protected override void OnTriggerLethal(SleepwalkerController character)
     {
-        throw new System.NotImplementedException();
+        character.Die();
     }
 }
