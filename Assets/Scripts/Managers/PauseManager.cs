@@ -1,6 +1,6 @@
 using UnityEngine;
 
-/// <summary>每个关卡放置一个；请挂在始终启用的对象上，而不是暂停面板上。</summary>
+/// <summary>管理关卡暂停、Esc 输入和暂停面板；每个关卡放一个常驻对象。</summary>
 [DefaultExecutionOrder(-100)]
 [DisallowMultipleComponent]
 public class PauseManager : MonoBehaviour
@@ -24,6 +24,7 @@ public class PauseManager : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
+        // 关闭 Domain Reload 时也要清除上次 Play 留下的静态引用。
         owner = null;
     }
 
@@ -41,6 +42,7 @@ public class PauseManager : MonoBehaviour
         {
             // Time.timeScale 为 0 时，暂停 UI 的动画仍继续播放。
             pauseAnimator.updateMode = AnimatorUpdateMode.UnscaledTime;
+            // 只在参数确实是 Bool 时设置，避免 Animator 参数类型错误。
             foreach (AnimatorControllerParameter parameter in pauseAnimator.parameters)
             {
                 if (parameter.name == pauseParameter && parameter.type == AnimatorControllerParameterType.Bool)
@@ -58,6 +60,7 @@ public class PauseManager : MonoBehaviour
 
     private void Update()
     {
+        // timeScale 为 0 不会停止 Update，Esc 仍可用于恢复。
         if (Input.GetKeyDown(KeyCode.Escape))
             TogglePause();
     }
@@ -71,6 +74,7 @@ public class PauseManager : MonoBehaviour
 
     public void Pause()
     {
+        // 已暂停、组件停用或在主菜单时，不重复修改时间倍率。
         if (!isActiveAndEnabled || paused || IsPaused ||
             gameObject.scene.name == mainMenuSceneName)
             return;
@@ -86,6 +90,7 @@ public class PauseManager : MonoBehaviour
     {
         if (!paused) return;
 
+        // 恢复暂停前的倍率，而非固定设为 1。
         paused = false;
         Time.timeScale = previousTimeScale;
         if (owner == this) owner = null;
@@ -94,6 +99,7 @@ public class PauseManager : MonoBehaviour
 
     private void SetUI(bool visible)
     {
+        // 动画参数可选：没配置 Animator 时仍可显示/隐藏面板。
         if (visible && pauseUI != null) pauseUI.SetActive(true);
         if (pauseAnimator != null && hasPauseParameter)
             pauseAnimator.SetBool(pauseParameter, visible);

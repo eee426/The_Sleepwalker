@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 
+/// <summary>梦游者状态机：切状态、同步 Animator，并通知移动/死亡组件。</summary>
 [RequireComponent(typeof(SleepWalkerMove))]
 [RequireComponent(typeof(SleepwalkerDeath))]
 public class SleepwalkerController : MonoBehaviour
@@ -25,6 +26,7 @@ public class SleepwalkerController : MonoBehaviour
 
     private void Awake()
     {
+        // RequireComponent 保证两个行为组件存在；Animator 可手动指定。
         death = GetComponent<SleepwalkerDeath>();
         movement = GetComponent<SleepWalkerMove>();
 
@@ -36,6 +38,7 @@ public class SleepwalkerController : MonoBehaviour
 
     private void Start()
     {
+        // 初始 Die 要走完整死亡流程；其他状态仅同步状态与移动。
         if (initialState == SleepwalkerState.Die)
             Die();
         else
@@ -71,21 +74,28 @@ public class SleepwalkerController : MonoBehaviour
     /// <summary>供陷阱等外部逻辑调用。</summary>
     public void Die()
     {
+        // 死亡不可重复执行，避免重复触发后续逻辑。
         if (IsDead)
             return;
 
         ApplyState(SleepwalkerState.Die);
-        death.Die();
+        death.HandleDeath();
     }
 
     private void ApplyState(SleepwalkerState newState, bool force = false)
     {
+        // force 用于 Start：枚举默认值可能恰好等于配置的初始状态。
         if (!force && currentState == newState)
             return;
 
         currentState = newState;
-        movement.enabled = currentState == SleepwalkerState.Move;
+        // 状态机只决定何时启动/停止；具体移动操作由 Move 脚本负责。
+        if (currentState == SleepwalkerState.Move)
+            movement.StartMoving();
+        else if (currentState == SleepwalkerState.Idle)
+            movement.StopMoving();
 
+        // State 是 Int 参数（Idle=0、Move=1、Die=2），不是 Animator Trigger。
         if (animator != null && hasStateParameter)
             animator.SetInteger(stateParameterName, (int)currentState);
 
@@ -94,6 +104,7 @@ public class SleepwalkerController : MonoBehaviour
 
     private bool HasIntParameter(string parameterName)
     {
+        // 参数缺失时跳过写入，避免 Animator 报错。
         if (animator == null || string.IsNullOrEmpty(parameterName))
             return false;
 
